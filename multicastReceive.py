@@ -5,7 +5,7 @@ import socket
 from contextlib import closing
 
 def main():
-    local_address   = '192.168.0.2' # 受信側のPCのIPアドレス
+    local_address   = '192.168.1.8' # 受信側のPCのIPアドレス
     multicast_group = '239.255.0.1' # マルチキャストアドレス
     port = 4000
     bufsize = 4096

@@ -1,8 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-
-
+import pyping
 import netifaces
 
 # IPアドレスのリストの取得
@@ -14,7 +13,6 @@ def getIpAddress():
         print(iface_data.get(netifaces.AF_INET))
         ipList.extend(iface_data.get(netifaces.AF_INET))
     return ipList
-
 
 # IPアドレスのリストをフィルタして，特定のアドレスを取り出す
 # 出力例 : '127.0.0.1'
@@ -30,3 +28,4 @@ if __name__ == '__main__':
     ip=getIpAddress()
     local_ip=addressFilter(ip,'192.168')
     print local_ip
+    val = pyping.ping('192.168.1.1')

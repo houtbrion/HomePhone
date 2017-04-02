@@ -6,7 +6,7 @@ import time
 from contextlib import closing
 
 def main():
-    local_address   = '192.168.0.1' # 送信側のPCのIPアドレス
+    local_address   = '192.168.1.8' # 送信側のPCのIPアドレス
     multicast_group = '239.255.0.1' # マルチキャストアドレス
     port = 4000
 
