@@ -3,8 +3,13 @@
 from __future__ import print_function
 import socket
 from contextlib import closing
+import pyaudio
 
-def main():
+# 音声処理のパラメータ
+RATE=44100
+CHUNK=128
+
+def main(stream):
     #local_address   = '192.168.1.8' # 受信側のPCのIPアドレス
     local_address   = '10.25.170.220' # 受信側のPCのIPアドレス
     multicast_group = '239.255.0.1' # マルチキャストアドレス
@@ -20,8 +25,15 @@ def main():
                              + socket.inet_aton(local_address))
 
         while True:
-            print(sock.recv(bufsize))
+            #print(sock.recv(bufsize))
+            stream.write(sock.recv(bufsize))
     return
 
 if __name__ == '__main__':
-    main()
+    audio=pyaudio.PyAudio()
+    stream= audio.open(   format = pyaudio.paInt16,
+        channels = 2,
+        rate = RATE,
+        frames_per_buffer = CHUNK,
+        output = True)
+    main(stream)
