@@ -4,7 +4,6 @@
 # モジュールをインポートする
 import pyaudio
 import RPi.GPIO as GPIO
-#import time
 import os
 import sys
 import threading
@@ -19,8 +18,9 @@ PORT = 4000
 BUTTON_CHECK=True
 #BUTTON_CHECK=False
 
-# ボタンが繋がったピン番号の定義
+# ピン番号の定義
 BUTTON=21
+LED=20
 
 # ボタンのタイプ
 BUTTON_TYPE=0 # プルダウン式
@@ -40,9 +40,6 @@ RATE=44100
 CHUNK=128
 
 #グローバル変数
-#pinState=False # ボタンが押されているか否かを示す変数
-#pinState=True # ボタンが押されているか否かを示す変数
-
 pinState = 0 # ボタンが押されているか否かを示す変数
 
 def buttonCallBack(self):
@@ -53,28 +50,21 @@ def buttonCallBack(self):
         pinState=2
 
 # GPIOのピンの設定
-def setup(pin,localAddr):
+def setup(button,led):
     # GPIOの初期化
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(led, GPIO.OUT, pull_up_down=GPIO.PUD_DOWN)
     GPIO.add_event_detect(pin, GPIO.BOTH)
     GPIO.add_event_callback(pin, buttonCallBack)
-    # 音声デバイスのオープン
-    #return audio.open(   format = pyaudio.paInt16,
-    #  #channels = 1,
-    #  channels = 2,
-    #  rate = rate,
-    #  frames_per_buffer = chunk,
-    #  input = True,
-    #  output = True) # inputとoutputを同時にTrueにする
-    sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(localAddr))
-    return sock
 
 # なにかのエラーで終了する場合は，PIDファイルを消去，GPIOの設定をリセット, オーディオをクローズ
 def finish(sock,audio,pidFile):
     sock.close()
+    # ストリームをクローズ
+    instream.stop_stream()
+    instream.close()
     # オーディオデバイスをクローズ
     audio.terminate()
     # GPIO設定をリセット
@@ -85,7 +75,7 @@ def finish(sock,audio,pidFile):
     sys.exit()
 
 # daemon化する処理
-def fork(pidFile,check,sock,audio,chunk):
+def fork(pidFile,check,sock,localAddr,destAddr,port,audio,chunk,led):
     pid = os.fork()
     if pid > 0:
         f = open(pidFile,'w')
@@ -93,7 +83,13 @@ def fork(pidFile,check,sock,audio,chunk):
         f.close()
         sys.exit()
     if pid == 0:
-        loop(check,audio,chunk)
+        loop(check,sock,destAddr,port,audio,chunk,led)
+
+# LEDの状態設定
+def setLED(pin,flag):
+    if (flag!=0) and (flag!=1):
+        return
+    #GPIO.output(pin,flag)
 
 # ループの1ラウンド
 def oneRound(instream,chunk,sock,destAddr,port):
@@ -104,30 +100,25 @@ def oneRound(instream,chunk,sock,destAddr,port):
 
 # メインのループ
 #def loop(check,chunk):
-def loop(check,sock,destAddr,port,audio,chunk):
+def loop(check,sock,destAddr,port,stream,chunk,led):
     global pinState
     while True:
         if check:
             if pinState==1:
                 pinState=3
+                localAddr='10.25.170.220' # 送信側のPCのIPアドレス
+                sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(localAddr))
                 print "send start"
-                #audio=pyaudio.PyAudio()
-                # 音声入力デバイスのオープン
-                instream= audio.open(   format = pyaudio.paInt16,
-                    channels = 2,
-                    rate = RATE,
-                    frames_per_buffer = chunk,
-                    input = True) 
-                oneRound(instream,chunk,sock,destAddr,port)
+                setLED(led,1)
+                oneRound(stream,chunk,sock,destAddr,port)
             if pinState==2:
                 pinState=0
                 print "send finish"
-                instream.stop_stream()
-                instream.close()
+                setLED(led,0)
             if pinState==3:
-                oneRound(instream,chunk,sock,destAddr,port)
+                oneRound(stream,chunk,sock,destAddr,port)
         else:
-            oneRound(instream,chunk,sock,destAddr,port)
+            oneRound(stream,chunk,sock,destAddr,port)
 
 # パッファ分の音声を出力
 def dataOut(sock,destAddr,port,data):
@@ -135,24 +126,27 @@ def dataOut(sock,destAddr,port,data):
 
 # メイン
 if __name__ == '__main__':
-    #setup(BUTTON)
-    #audio=pyaudio.PyAudio()
-    #loop(BUTTON_CHECK,audio,CHUNK)
-    #loop(BUTTON_CHECK,CHUNK)
     try:
-        sock=setup(BUTTON,LOCAL_ADDRESS)
         audio=pyaudio.PyAudio()
+        setup(BUTTON,LED)
+        sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # 音声入力デバイスのオープン
+        stream= audio.open(   format = pyaudio.paInt16,
+            channels = 2,
+            rate = RATE,
+            frames_per_buffer = CHUNK,
+            input = True) 
     except:
-        finish(sock,audio,PID_FILE)
+        finish(sock,stream,PID_FILE)
     if DAEMON:
         try:
-            fork(PID_FILE,BUTTON_CHECK,sock,MULTICAST_GROUP,PORT,audio,CHUNK)
+            fork(PID_FILE,BUTTON_CHECK,sock,MULTICAST_GROUP,PORT,stream,CHUNK,LED)
         except:
-            finish(sock,audio,PID_FILE)
+            finish(sock,audio,stream,PID_FILE)
     else:
         try:
-            loop(BUTTON_CHECK,sock,MULTICAST_GROUP,PORT,audio,CHUNK)
+            loop(BUTTON_CHECK,sock,MULTICAST_GROUP,PORT,stream,CHUNK,LED)
         except:
-            finish(sock,audio,PID_FILE)
+            finish(sock,audio,stream,PID_FILE)
 
 
