@@ -1,0 +1,88 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+import socket
+import time
+from contextlib import closing
+import netifaces
+
+# デバッグ用モジュールのインポート
+from logging import getLogger, StreamHandler, NullHandler, DEBUG
+
+
+INTERVAL=3
+MULTICAST = '239.255.0.1' # マルチキャストアドレス
+PORT = 12345
+BUFF_SIZE = 512
+DEVNAME='eth'
+
+# 動作モード
+DEBUG_FLAG=False
+#DEBUG_FLAG=True
+
+
+# IPアドレスのリストの取得
+# 出力例 : [{'addr': '127.0.0.1', 'netmask': '255.0.0.0', 'peer': '127.0.0.1'}]
+def getIpAddress():
+    global logger
+    logger.debug("get ip address")
+    ipList=[]
+    for iface_name in netifaces.interfaces():
+        iface_data = netifaces.ifaddresses(iface_name).get(netifaces.AF_INET)
+        if iface_data!=None:
+            iface_data[0]['dev'] = iface_name
+            ipList.extend(iface_data)
+    logger.debug(ipList)
+    return ipList
+
+# IPアドレスのリストをフィルタして，特定のデバイスのアドレスを取り出す
+# 出力例 : '127.0.0.1'
+def deviceFilter(ipList,filterString):
+    for addressInfo in ipList:
+        dev=addressInfo['dev']
+        if filterString in dev:
+            return addressInfo['addr']
+    return ''
+
+# 全体の設定
+#
+def setup(debugFlag):
+    global logger
+    logger = getLogger(__name__)
+    if debugFlag:
+        handler = StreamHandler()
+        handler.setLevel(DEBUG)
+        logger.setLevel(DEBUG)
+    else:
+        handler = NullHandler()
+    logger.addHandler(handler)
+
+def main(interval, devName, mAddr, port, bufSize):
+    global logger
+    ipList=getIpAddress()
+    local_address=deviceFilter(ipList,devName)
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_DGRAM)) as sock:
+        # sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(local_address))
+        count = 0
+        while True:
+            message = 'Hello world : {0}'.format(count).encode('utf-8')
+            count+=1
+            logger.debug(message)
+            sock.sendto(message, (mAddr, port))
+            while True:
+                logger.debug("try to receive packet")
+                sock.settimeout(interval)
+                try:
+                    sock.settimeout(interval)
+                    data, addr = sock.recvfrom(bufSize)
+                    #print(" data = {data}".format(data=data))
+                    print("packet received : addr = {addr} , data = {data}".format(addr=addr[0],data=data))
+                except socket.timeout:
+                    logger.debug("no packet received")
+                    break
+    return
+
+if __name__ == '__main__':
+    setup(DEBUG_FLAG)
+    main(INTERVAL, DEVNAME, MULTICAST, PORT, BUFF_SIZE)
