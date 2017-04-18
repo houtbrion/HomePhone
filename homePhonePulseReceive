@@ -1,0 +1,174 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# 各種モジュールのインポート
+#import pyping
+import netifaces
+from subprocess import Popen, STDOUT
+import RPi.GPIO as GPIO
+import time
+import os
+import sys
+import signal
+
+try:
+    from subprocess import DEVNULL # py3k
+except ImportError:
+    import os
+    DEVNULL = open(os.devnull, 'wb')
+
+# デバッグ用モジュールのインポート
+from logging import getLogger, StreamHandler, NullHandler, DEBUG
+
+
+# グローバル変数の定義
+startCmd="su pi -c 'pulseaudio -D'"
+stopCmd="su pi -c 'pulseaudio -k'"
+DEVNAME='eth'
+INTERVAL=10
+LED=16
+
+# daemon化するか否か
+#DAEMON=False
+DAEMON=True
+PID_FILE='/var/run/homePhonePulseReceive.pid'
+
+# 動作モード
+DEBUG_FLAG=False
+#DEBUG_FLAG=True
+
+
+# IPアドレスのリストの取得
+# 出力例 : [{'addr': '127.0.0.1', 'netmask': '255.0.0.0', 'peer': '127.0.0.1'}]
+def getIpAddress():
+    ipList=[]
+    for iface_name in netifaces.interfaces():
+        iface_data = netifaces.ifaddresses(iface_name).get(netifaces.AF_INET)
+        if iface_data!=None:
+            iface_data[0]['dev'] = iface_name
+            ipList.extend(iface_data)
+    return ipList
+
+# IPアドレスのリストをフィルタして，特定のデバイスのアドレスを取り出す
+# 出力例 : '127.0.0.1'
+def deviceFilter(ipList,filterString):
+    for addressInfo in ipList:
+        dev=addressInfo['dev']
+        if filterString in dev:
+            return addressInfo['addr']
+    return ""
+
+# LEDの状態設定
+#
+def setLED(pin,flag):
+    if flag:
+        GPIO.output(pin,1)
+    else:
+        GPIO.output(pin,0)
+
+
+# pulseaudioを停止
+#
+def stopPulse(cmd):
+    proc=Popen(cmd,shell=True,stdout=DEVNULL, stderr=STDOUT)
+
+# pulseaudioを実行
+#
+def startPulse(cmd):
+    proc=Popen(cmd,shell=True,stdout=DEVNULL, stderr=STDOUT)
+
+# 全体の設定
+# 
+def setup(led,cmd,debugFlag):
+    global logger
+    signal.signal(signal.SIGTERM, receiveSignal)
+    #signal.signal(signal.SIGKILL, receiveSignal)
+    logger = getLogger(__name__)
+    if debugFlag:
+        handler = StreamHandler()
+        handler.setLevel(DEBUG)
+        logger.setLevel(DEBUG)
+    else:
+        handler = NullHandler()
+    logger.addHandler(handler)
+
+    GPIO.setwarnings(False)
+    GPIO.cleanup()
+    # GPIO指定をGPIO番号で行う
+    GPIO.setmode(GPIO.BCM)
+    # LEDピンを出力モードに設定して，消す
+    GPIO.setup(led, GPIO.OUT)
+    GPIO.output(led, 0)
+    stopPulse(cmd)
+
+# ループ
+# ネットワークのIPアドレスがなければ警告を出す．
+def loop(interval,led,devName,startCmd,stopCmd):
+    global logger
+    logger.debug("loop Top, devname = {name}".format(name=devName))
+    networkState=False
+    while True:
+        ipList=getIpAddress()
+        local_ip=deviceFilter(ipList,devName)
+        if local_ip=="":
+            logger.debug("network is down")
+            if networkState:
+                networkState=False
+                stopPulse(stopCmd)
+            setLED(led,False)
+        else:
+            logger.debug("network is up")
+            if not networkState:
+                networkState=True
+                stopPulse(stopCmd)
+                startPulse(startCmd)
+                setLED(led,True)
+        time.sleep(interval)
+
+# daemon化
+#
+def fork(flag,pidFile,interval,led,devName,startCmd,stopCmd):
+    pid = os.fork()
+    if pid > 0:
+        f = open(pidFile,'w')
+        f.write(str(pid)+"\n")
+        f.close()
+        sys.exit()
+    if pid == 0:
+        setup(led, stopCmd, flag)
+        loop(interval,led,devName,startCmd,stopCmd)
+
+# 終了処理
+#   なにかのエラーで終了する場合は，PIDファイルを消去，LEDを消して，GPIOの設定をリセット
+def finish(pidFile,pin,cmd):
+    stopPulse(cmd)
+    # LEDのピンをLOWに設定
+    GPIO.output(pin, 0)
+    # GPIO設定をリセット
+    GPIO.cleanup()
+    # ファイルを消す
+    if os.path.exists(pidFile):
+        os.remove(pidFile)
+    sys.exit()
+
+# シグナルを受けた場合の処理
+#
+def receiveSignal(num,stack):
+    global PID_FILE, LED, stopCmd
+    finish(PID_FILE,LED,stopCmd)
+    
+#
+# メイン
+#
+if __name__ == '__main__':
+    if DAEMON:
+        try:
+            fork(DEBUG_FLAG,PID_FILE,INTERVAL,LED,DEVNAME,startCmd,stopCmd)
+        except:
+            sys.exit()
+    else:
+        setup(LED, stopCmd, DEBUG_FLAG)
+        try:
+            loop(INTERVAL,LED,DEVNAME,startCmd,stopCmd)
+        except:
+            finish(PID_FILE,LED,stopCmd)
