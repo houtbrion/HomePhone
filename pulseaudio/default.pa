@@ -90,12 +90,13 @@ load-module module-native-protocol-unix
 ### Load the RTP receiver module (also configured via paprefs, see above)
 #load-module module-rtp-recv
 #load-module module-rtp-recv sink=rtp
-load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000000000-00-S2.analog-stereo latency_msec=2000
+#load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo latency_msec=2000
+load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo latency_msec=500
 
 ### Load the RTP sender module (also configured via paprefs, see above)
 #load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 sink_properties="device.description='RTP Multicast Sink'"
-load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 sink_properties="device.description='RTP Multicast Sink'"
-#load-module module-rtp-send source=rtp.monitor
+#load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 sink_properties="device.description='RTP Multicast Sink'"
+#load-module module-rtp-send source=rtp.monitor inhibit_auto_suspend=only_with_non_monitor_sources
 #load-module module-rtp-send source=rtp.monitor destination=225.0.0.1 port=12345
 
 ### Load additional modules from GConf settings. This can be configured with the paprefs tool.
@@ -166,9 +167,11 @@ load-module module-filter-apply
 
 ### Make some devices default
 #set-default-sink output
-set-default-sink rtp
+#set-default-sink rtp
 #set-default-source alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000000000-00-S2.analog-stereo.monitor
-set-default-source alsa_input.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000000000-00-S2.analog-stereo
+set-default-source alsa_input.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo
 #set-default-source rtp_monitor
 #
 #set-source-volume 1 300000
+set-source-volume alsa_input.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo 65536
+set-sink-volume alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo 65536
