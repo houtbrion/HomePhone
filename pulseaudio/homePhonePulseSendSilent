@@ -1,0 +1,150 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+#import threading
+from subprocess import Popen, STDOUT
+import RPi.GPIO as GPIO
+import time
+import os
+import sys
+import signal
+
+try:
+    from subprocess import DEVNULL # py3k
+except ImportError:
+    import os
+    DEVNULL = open(os.devnull, 'wb')
+
+# デバッグ用モジュールのインポート
+from logging import getLogger, StreamHandler, NullHandler, DEBUG
+
+# daemon化するか否か
+DAEMON=True
+#DAEMON=False
+PID_FILE='/var/run/homePhonePulseSendSilent.pid'
+
+#pinState=False
+#pinStateLast=False
+BUTTON=21
+LED=20
+COMMAND_RUN="su pi /usr/local/bin/startRtpSend"
+COMMAND_STOP="su pi /usr/local/bin/stopRtpSend"
+#COMMAND_RUN="su pi /usr/local/bin/paloop"
+#COMMAND_STOP="kill `pidof parec`"
+
+# 動作モード
+DEBUG_FLAG=False
+#DEBUG_FLAG=True
+
+#
+# ボタンのチェック
+#
+def button(pin):
+    if (1==GPIO.input(pin)):
+        return True
+    else:
+        return False
+
+#
+# セットアップ
+#
+def setup(debugFlag,buttonPin,led):
+    global logger
+    signal.signal(signal.SIGTERM, receiveSignal)
+    logger = getLogger(__name__)
+    if debugFlag:
+        handler = StreamHandler()
+        handler.setLevel(DEBUG)
+        logger.setLevel(DEBUG)
+    else:
+        handler = NullHandler()
+    logger.addHandler(handler)
+
+    GPIO.setwarnings(False)
+    GPIO.cleanup()
+    # GPIO指定をGPIO番号で行う
+    GPIO.setmode(GPIO.BCM)
+    # GPIO21ピンを入力モードに設定
+    GPIO.setup(buttonPin, GPIO.IN)
+    # GPIO21ピンを出力モードに設定
+    GPIO.setup(led, GPIO.OUT)
+
+#
+# 終了時の後始末
+#
+def finish(pidFile,pin,cmd):
+    proc=Popen(cmd,shell=True,stdout=DEVNULL, stderr=STDOUT)
+    # LEDのピンをLOWに設定
+    GPIO.output(pin, 0)
+    # GPIO設定をリセット
+    GPIO.cleanup()
+    # ファイルを消す
+    if os.path.exists(pidFile):
+        os.remove(pidFile)
+    sys.exit()
+
+#
+# シグナルを受けた場合の処理
+#
+def receiveSignal(num,stack):
+    global PID_FILE, LED, stopCmd
+    finish(PID_FILE,LED,stopCmd)
+
+#
+# LEDの状態設定
+#
+def setLED(pin,flag):
+    if flag:
+        GPIO.output(pin,1)
+    else:
+        GPIO.output(pin,0)
+
+#
+# メインループ
+#
+def loop(buttonPin,led,cmdRUN,cmdSTOP):
+    global proc,logger
+    pinState=False
+    while True:
+        state = button(buttonPin)
+        if pinState != state:
+            if state:
+                proc=Popen(cmdRUN,shell=True,stdout=DEVNULL, stderr=STDOUT)
+                logger.debug("process start")
+                time.sleep(0.5)
+                setLED(led,True)
+            else:
+                proc=Popen(cmdSTOP,shell=True,stdout=DEVNULL, stderr=STDOUT)
+                logger.debug("process stop")
+                time.sleep(0.5)
+                setLED(led,False)
+            pinState=state
+        time.sleep(0.1)
+
+#
+# daemon化
+#
+def fork(flag, pidFile,buttonPin,ledPin,startCmd,stopCmd):
+    pid = os.fork()
+    if pid > 0:
+        f = open(pidFile,'w')
+        f.write(str(pid)+"\n")
+        f.close()
+        sys.exit()
+    if pid == 0:
+        setup(flag,buttonPin,ledPin)
+        loop(buttonPin,ledPin,startCmd,stopCmd)
+
+
+if __name__ == '__main__':
+    if DAEMON:
+        try:
+            fork(DEBUG_FLAG, PID_FILE,BUTTON, LED, COMMAND_RUN, COMMAND_STOP)
+        except:
+            sys.exit()
+    else:
+        setup(DEBUG_FLAG, BUTTON, LED)
+        try:
+            loop(BUTTON, LED, COMMAND_RUN, COMMAND_STOP)
+        except:
+            finish(PID_FILE,LED,COMMAND_STOP)

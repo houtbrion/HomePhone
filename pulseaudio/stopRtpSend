@@ -1,0 +1,9 @@
+#!/bin/sh
+kill `pidof parec`
+#pulseaudio -k
+#pactl exit
+#sleepenh 0.3
+#pulseaudio -DF /home/pi/.pulse/rtp-recv.pa
+pactl unload-module module-rtp-send
+
+

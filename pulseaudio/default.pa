@@ -95,7 +95,7 @@ load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_B
 ### Load the RTP sender module (also configured via paprefs, see above)
 #load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 sink_properties="device.description='RTP Multicast Sink'"
 load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 sink_properties="device.description='RTP Multicast Sink'"
-load-module module-rtp-send source=rtp.monitor
+#load-module module-rtp-send source=rtp.monitor
 #load-module module-rtp-send source=rtp.monitor destination=225.0.0.1 port=12345
 
 ### Load additional modules from GConf settings. This can be configured with the paprefs tool.
