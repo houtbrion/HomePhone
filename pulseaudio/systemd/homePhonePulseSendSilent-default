@@ -1,0 +1,6 @@
+#
+#
+PID_FILE=/var/run/homePhonePulseSendSilent.pid
+RUN_DIR=/var/run
+LOG=/var/log/homePhone/homePhonePulseSendSilent.log
+LOCK_FILE=/var/run/homePhonePulseSendSilent.lock

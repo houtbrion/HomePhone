@@ -1,0 +1,6 @@
+#
+#
+PID_FILE=/var/run/homePhonePulseReceive.pid
+RUN_DIR=/var/run
+LOG=/var/log/homePhone/homePhonePulseReceive.log
+LOCK_FILE=/var/run/homePhonePulseReceive.lock
