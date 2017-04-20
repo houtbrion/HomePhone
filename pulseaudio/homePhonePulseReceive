@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # 各種モジュールのインポート
-#import pyping
 import netifaces
 from subprocess import Popen, STDOUT
 import RPi.GPIO as GPIO

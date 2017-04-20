@@ -23,8 +23,6 @@ DAEMON=True
 #DAEMON=False
 PID_FILE='/var/run/homePhonePulseSend.pid'
 
-#pinState=False
-#pinStateLast=False
 BUTTON=21
 LED=20
 COMMAND_RUN="su pi /usr/local/bin/paloop"
