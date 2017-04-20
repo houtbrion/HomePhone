@@ -4,7 +4,7 @@ After=syslog.target network.target
 
 [Service]
 Type=forking
-EnvironmentFile=-/etc/default/mppingResponder
+EnvironmentFile=/etc/default/mppingResponder
 WorkingDirectory=/var/run
 ExecStart=/usr/local/bin/mppingResponder-start.sh
 ExecStop=/usr/local/bin/mppingResponder-stop.sh
