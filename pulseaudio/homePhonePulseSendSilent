@@ -19,8 +19,8 @@ except ImportError:
 from logging import getLogger, StreamHandler, NullHandler, DEBUG
 
 # daemon化するか否か
-#DAEMON=True
-DAEMON=False
+DAEMON=True
+#DAEMON=False
 PID_FILE='/var/run/homePhonePulseSendSilent.pid'
 
 #pinState=False
@@ -33,8 +33,8 @@ COMMAND_STOP="su pi /usr/local/bin/stopRtpSend"
 #COMMAND_STOP="kill `pidof parec`"
 
 # 動作モード
-#DEBUG_FLAG=False
-DEBUG_FLAG=True
+DEBUG_FLAG=False
+#DEBUG_FLAG=True
 
 #
 # ボタンのチェック
