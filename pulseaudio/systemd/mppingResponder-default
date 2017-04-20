@@ -1,0 +1,6 @@
+#
+#
+PID_FILE=/var/run/mppingResponder.pid
+RUN_DIR=/var/run
+LOG=/var/log/homePhone/mppingResponder.log
+LOCK_FILE=/var/run/mppingResponder.lock

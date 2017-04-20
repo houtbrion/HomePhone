@@ -29,8 +29,6 @@ BUTTON=21
 LED=20
 COMMAND_RUN="su pi /usr/local/bin/startRtpSend"
 COMMAND_STOP="su pi /usr/local/bin/stopRtpSend"
-#COMMAND_RUN="su pi /usr/local/bin/paloop"
-#COMMAND_STOP="kill `pidof parec`"
 
 # 動作モード
 DEBUG_FLAG=False

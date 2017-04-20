@@ -1,0 +1,17 @@
+[Unit]
+Description=mppingResponder
+After=syslog.target network.target
+
+[Service]
+Type=forking
+EnvironmentFile=-/etc/default/mppingResponder
+WorkingDirectory=/var/run
+ExecStart=/usr/local/bin/mppingResponder-start.sh
+ExecStop=/usr/local/bin/mppingResponder-stop.sh
+User=root
+Group=root
+KillMode=none
+Restart = always
+
+[Install]
+WantedBy=multi-user.target
