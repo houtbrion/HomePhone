@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # 各種モジュールのインポート
-#import pyping
 import netifaces
 from subprocess import Popen, STDOUT
 import RPi.GPIO as GPIO
 import time
 import os
-import sys
 import signal
+import sys
 from contextlib import closing
 import socket
 
@@ -69,6 +68,8 @@ def deviceFilter(ipList,filterString):
 # 
 def setup(debugFlag):
     global logger
+    global hostname
+    hostname='%s' % os.uname()[1]
     signal.signal(signal.SIGTERM, receiveSignal)
     #signal.signal(signal.SIGKILL, receiveSignal)
     logger = getLogger(__name__)
@@ -84,6 +85,7 @@ def setup(debugFlag):
 # ネットワークのIPアドレスがなければ警告を出す．
 def loop(interval,devName,maddr,port,bufsize):
     global logger
+    global hostname
     #global sock
     logger.debug("loop Top, devname = {name}".format(name=devName))
     with closing(socket.socket(socket.AF_INET, socket.SOCK_DGRAM)) as sock:
@@ -112,7 +114,8 @@ def loop(interval,devName,maddr,port,bufsize):
                     logger.debug("packet received : addr = {addr} , port = {port} , data = {data}".format(addr=addr[0],port=addr[1],data=data))
                     if addr[1] != port:
                         logger.debug("send packet")
-                        sock.sendto('myHostName',(addr[0],addr[1]))
+                        #sock.sendto('myHostName',(addr[0],addr[1]))
+                        sock.sendto(hostname,(addr[0],addr[1]))
                 except socket.timeout:
                     logger.debug("no packet received")
                     #time.sleep(0.1)
