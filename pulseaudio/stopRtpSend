@@ -1,10 +1,7 @@
 #!/bin/sh
-sleepenh 1 &>/dev/null
 kill `pidof parec` &>/dev/null
-#pulseaudio -k
-#pactl exit
-#sleepenh 0.3
-#pulseaudio -DF /home/pi/.pulse/rtp-recv.pa
 pactl unload-module module-rtp-send &>/dev/null
+sleepenh 1 &>/dev/null
+pactl load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo latency_msec=500 &>/dev/null
 
 

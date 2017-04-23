@@ -1,8 +1,5 @@
 #!/bin/sh
-#pulseaudio -k
-#sleepenh 0.3
-#pulseaudio -DF /home/pi/.pulse/rtp-send.pa
-#pactl load-module module-rtp-send source=rtp.monitor
+pactl unload-module module-rtp-recv &> /dev/null
 pactl load-module module-rtp-send  &> /dev/null
 sleepenh 0.3 &>/dev/null
 parec | pacat -p 
