@@ -2,6 +2,7 @@
 kill `pidof parec` &>/dev/null
 pactl unload-module module-rtp-send &>/dev/null
 sleepenh 1 &>/dev/null
-pactl load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo latency_msec=500 &>/dev/null
+#pactl load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo latency_msec=500 &>/dev/null
+pactl set-sink-mute 0 0
 
 

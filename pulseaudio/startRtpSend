@@ -1,6 +1,8 @@
 #!/bin/sh
-pactl unload-module module-rtp-recv &> /dev/null
-pactl load-module module-rtp-send  &> /dev/null
+#set-sink-volume alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo 0
+pactl set-sink-mute 0 1
+#pactl unload-module module-rtp-recv &> /dev/null
+pactl load-module module-rtp-send loop=false  &> /dev/null
 sleepenh 0.3 &>/dev/null
 parec | pacat -p 
 
