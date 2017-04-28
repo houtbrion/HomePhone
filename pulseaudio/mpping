@@ -14,7 +14,7 @@ INTERVAL=3
 MULTICAST = '239.255.0.1' # マルチキャストアドレス
 PORT = 12345
 BUFF_SIZE = 512
-DEVNAME='eth'
+DEVNAME='wlan'
 
 # 動作モード
 DEBUG_FLAG=False

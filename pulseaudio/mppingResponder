@@ -24,7 +24,7 @@ from logging import getLogger, StreamHandler, NullHandler, DEBUG
 
 
 # グローバル変数の定義
-DEVNAME='eth'
+DEVNAME='wlan'
 INTERVAL=10
 MULTICAST = '239.255.0.1' # マルチキャストアドレス
 PORT = 12345
