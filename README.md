@@ -50,7 +50,7 @@ daemonを常駐させることとした．
 
 ## 使ったハードウェア
 | 種類                    | 機種等                             |
-|:------------------------|-----------------------------------:|
+|:------------------------|:-----------------------------------|
 | 本体                    | Raspberry Pi3とRaspberry Pi zero W |
 | USBサウンド             | [SOUND BLASTER PLAY! 2](http://jp.creative.com/p/sound-blaster/sound-blaster-play-2)|
 | アンプ                  | [極小D級アンプモジュール(3W) AMP8002-3W](http://www.aitendo.com/product/4278)|
