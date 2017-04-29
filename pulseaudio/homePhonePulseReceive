@@ -23,7 +23,7 @@ from logging import getLogger, StreamHandler, NullHandler, DEBUG
 # グローバル変数の定義
 startCmd="su pi -c 'pulseaudio -D'"
 stopCmd="su pi -c 'pulseaudio -k'"
-DEVNAME='eth'
+DEVNAME='wlan'
 INTERVAL=10
 LED=16
 
@@ -117,11 +117,13 @@ def loop(interval,led,devName,startCmd,stopCmd):
             setLED(led,False)
         else:
             logger.debug("network is up")
-            if not networkState:
-                networkState=True
-                stopPulse(stopCmd)
-                startPulse(startCmd)
-                setLED(led,True)
+            startPulse(startCmd)
+            setLED(led,True)
+            #if not networkState:
+            #    networkState=True
+            #    stopPulse(stopCmd)
+            #    startPulse(startCmd)
+            #    setLED(led,True)
         time.sleep(interval)
 
 # daemon化
