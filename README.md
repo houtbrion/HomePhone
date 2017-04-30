@@ -290,26 +290,21 @@ load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 si
 ```
 #!/bin/sh
 pactl set-sink-mute 0 1
-pactl load-module module-rtp-send loop=false  &> /dev/null
-sleepenh 0.3 &>/dev/null
-parec | pacat -p  <--この行を削除して下の行と置き換え
+pactl load-module module-rtp-send loop=false  &> /dev/null <-- この行を置き換え
+sleepenh 0.3 &>/dev/null <-- この行を削除
+parec | pacat -p  <--この行を削除
 ```
 
 置き換える行
 ```
-pactl load-module module-rtp-send source=rtp.monitor
+pactl load-module module-rtp-send source=rtp.monitor loop=false &> /dev/null
 ```
 
 ### 送信終了スクリプト(stopRtpSend)の変更
 ```
 #!/bin/sh
-kill `pidof parec` &>/dev/null  <--- この行を削除して下のpactlと置き換え
+kill `pidof parec` &>/dev/null  <--- この行を削除
 pactl unload-module module-rtp-send &>/dev/null
 sleepenh 2 &>/dev/null
 pactl set-sink-mute 0 0
-```
-
-置き換える行
-```
-pactl unload-module module-rtp-send
 ```
