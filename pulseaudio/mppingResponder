@@ -99,7 +99,8 @@ def loop(interval,devName,maddr,port,bufsize):
             newAddr=deviceFilter(ipList,devName)
             logger.debug("newAddr = {addr}".format(addr=newAddr))
             if newAddr=="":
-                time.sleep(interval)
+                #time.sleep(interval)
+                return
             else:
                 logger.debug("network is active")
                 if ((newAddr != localAddr) or (localAddr=='')):
@@ -132,6 +133,7 @@ def fork(flag,pidFile,interval,devName,addr,port,bufsize):
     if pid == 0:
         setup(flag)
         loop(interval,devName,addr,port,bufsize)
+        finish(pidFile)
 
 # 終了処理
 #   なにかのエラーで終了する場合は，PIDファイルを消去
@@ -161,5 +163,6 @@ if __name__ == '__main__':
         logger.debug("setup done")
         try:
             loop(INTERVAL,DEVNAME,MULTICAST,PORT,BUFF_SIZE)
+            finish(PID_FILE)
         except:
             finish(PID_FILE)
