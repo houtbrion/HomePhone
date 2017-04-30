@@ -261,7 +261,30 @@ ext4は簡単にはファイルシステムは壊れないが，電源ブチブ�
 ## 参考:まとも?なUSBサウンドモジュールを使う場合
 サウンドブラスターでは，pulseaudioの機能でマイクからの入力をそのままRTPで送信することができなかったが，他のサウンドモジュールでは，可能かもしれない．その場合の変更すべき点は以下の3箇所．
 ### default.paの編集
+
+#### サウンドモジュールの名前の変更
 サウンドモジュールの名前が当然変わるのでdefault.paの入出力デバイスを名前で直接指定している部分は変更する．
+
+RTPで受信したデータを書き込む先のモジュールの指定
+```
+### Load the RTP receiver module (also configured via paprefs, see above)
+load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo latency_msec=500
+```
+
+デフォルトデバイスとその音量の指定の部分
+```
+### Make some devices default
+set-default-source alsa_input.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo
+set-sink-volume alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo 65536
+set-source-volume alsa_input.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo 65536
+#
+```
+
+#### 音声取り込みモジュールの定義の追加
+```
+### Load the RTP sender module (also configured via paprefs, see above)
+load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=44100 sink_properties="device.description='RTP Multicast Sink'"
+```
 
 ### 送信開始スクリプト(startRtpSend)の変更
 ```
@@ -269,14 +292,24 @@ ext4は簡単にはファイルシステムは壊れないが，電源ブチブ�
 pactl set-sink-mute 0 1
 pactl load-module module-rtp-send loop=false  &> /dev/null
 sleepenh 0.3 &>/dev/null
-parec | pacat -p  <--この行を削除
+parec | pacat -p  <--この行を削除して下の行と置き換え
+```
+
+置き換える行
+```
+pactl load-module module-rtp-send source=rtp.monitor
 ```
 
 ### 送信終了スクリプト(stopRtpSend)の変更
 ```
 #!/bin/sh
-kill `pidof parec` &>/dev/null  <--- この行を削除
+kill `pidof parec` &>/dev/null  <--- この行を削除して下のpactlと置き換え
 pactl unload-module module-rtp-send &>/dev/null
 sleepenh 2 &>/dev/null
 pactl set-sink-mute 0 0
+```
+
+置き換える行
+```
+pactl unload-module module-rtp-send
 ```
