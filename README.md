@@ -1,30 +1,24 @@
 # HomePhone
-Raspberry Pi等を使った部屋間のインターホン
-
-
-
-台所で『ご飯できたよー』が各部屋で聞こえないと，文句を言われるため，
-部屋間でアナウンスを流すためのインターホンモドキを作成．
-
+Raspberry Pi等を使った部屋間のインターホンを作ってみた．
 市販品を買わなかった理由はwifi対応のものは非常にお高いため．
 
-
-
+そもそもの制作の理由は，
+台所で『ご飯できたよー』が各部屋で聞こえないと，文句を言われるため．
 
 ## 動作原理
-ネットワークの接続状態を監視するdaemonで有効なIPアドレスが
+- ネットワークの接続状態を監視するdaemonで有効なIPアドレスが
 取得できたら，LEDを点けて，pulseaudioのdaemonを起動．
 
-pulseaudioのdaemonはrtpを受信すると再生するように設定ファイルに
-書いておく．
+- pulseaudioのdaemonはrtpを受信すると自動再生(するように設定ファイルに
+書いておく)．
 
-もう一つのdaemonでraspberry piのGPIOにつながっているボタンの
+- もう一つのdaemonでraspberry piのGPIOにつながっているボタンの
 状態を監視，ボタンが押されたら，pulseaudioにrtpの送信モジュールを
 ロードして，マイクから音声を拾って，pulseaudioに
 再生(RTPの送信)をさせるプログラムを呼び出した上，
-音声の再生モジュールの音量を最低(ミュート)にする．
+音声の再生モジュールの音量を最低(ミュート)にして，LEDを点灯．
 
-ボタンが離されたら，マイクの音を拾うプログラムをkillし，
+- ボタンが離されたら，マイクの音を拾うプログラムをkillし，
 pulseaudioのrtp送信モジュールをアンロード，
 音声再生モジュールのミュートを解除，
 最後にLEDを消灯．
@@ -35,7 +29,7 @@ dhcpでアドレスを取得するようにしているため，メンテナン�
 sshでログインするために家のルータに固定DHCPの設定をするのが
 面倒だった．
 
-そのため，マルチキャストのあるアドレスを監視し，
+そのため，マルチキャストアドレスを監視し，
 そこにUDPが届いたら，自分のホスト名を返信する
 daemonを常駐させることとした．
 
@@ -75,9 +69,6 @@ UDPのパケットに気がつくまでの時間が遅く，
 
 そのため，pyaudio以下のプログラムは参考用．
 
-
-
-
 ## USBサウンドの問題
 pulseaudioのサイトを見ると，マイクの音をrtp(宛先をマルチキャスト)で
 送信する場合，なんのアプリも不要でpulseaudioの設定のみでできると
@@ -107,7 +98,8 @@ pulseaudioのrtp^sendモジュールへのデータの引き渡しを
 なるようにする．
 
 
-### /etc/modprobe.d/alsa-base.conf
+### alsaの設定
+#### /etc/modprobe.d/alsa-base.conf
 ```
 # This sets the index value of the cards but doesn't reorder.
 options snd_usb_audio index=0
@@ -117,27 +109,83 @@ options snd_bcm2835 index=1
 options snd slots=snd_usb_audio,snd_bcm2835
 ```
 
+### pulseaudio
 次に，pulseaudioの設定
 
-### ~/config/pulse/client.conf
+#### ~/config/pulse/client.conf
 ```
 autospawn = no
 daemon-binary = /bin/true
 ```
 
-### ~/config/pulse/default.pa
+#### ~/config/pulse/default.pa
 
 - rtp-recvとnull-sinkデフォルトのサウンドデバイスの設定
 - 音量の設定
 - デバイス名を入れる
 
-#### デバイス名の調べ方
+
+今回はbluetoothのオーディオモジュールを使わないため，コメントアウト
 ```
-pacmd list-sources
+### Automatically load driver modules for Bluetooth hardware
+#.ifexists module-bluetooth-policy.so
+#load-module module-bluetooth-policy
+#.endif
+#
+#.ifexists module-bluetooth-discover.so
+#load-module module-bluetooth-discover
+#.endif
 ```
 
+RTPの受信モジュールの設定
+RTPで受信したデータをUSBサウンドに書き出す設定で"sink"から"analog-stereo"までの文字列は使っているサウンドモジュールの名前をpacmdで調べて置き換える．
 ```
-pacmd list-sinks
+### Load the RTP receiver module (also configured via paprefs, see above)
+load-module module-rtp-recv sink=alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo latency_msec=500
+```
+
+インターホンでは，Xウィンドウの環境は利用しないため，すべてコメントアウト
+```
+# X11 modules should not be started from default.pa so that one daemon
+# can be shared by multiple sessions.
+
+### Load X11 bell module
+#load-module module-x11-bell sample=bell-windowing-system
+
+### Register ourselves in the X11 session manager
+#load-module module-x11-xsmp
+
+### Publish connection data in the X11 root window
+#.ifexists module-x11-publish.so
+#.nofail
+#load-module module-x11-publish
+#.fail
+#.endif
+```
+
+デフォルトの入出力デバイスの指定とボリュームの設定
+```
+### Make some devices default
+set-default-source alsa_input.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo
+set-sink-volume alsa_output.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo 65536
+set-source-volume alsa_input.usb-Creative_Technology_Ltd_Sound_Blaster_Play__2_000000034722-00-S2.analog-stereo 65536
+#
+```
+
+エコーキャンセルモジュールのロードの指定
+```
+load-module module-echo-cancel
+```
+
+#### デバイス名の調べ方
+- マイク入力を調べる場合．
+```
+$ pacmd list-sources
+```
+
+- USBサウンドの音声出力側を調べる場合．
+```
+$ pacmd list-sinks
 ```
 
 
@@ -182,22 +230,22 @@ cp mppingResponder-default          /etc/default/mppingResponder
 #### まとめて処理する方法
 
 ```
-for i in homePhonePulseReceive homePhonePulseSendSilent mppingResponder
-do
-cp $i-default /etc/default/$i
-done
+$ for i in homePhonePulseReceive homePhonePulseSendSilent mppingResponder
+> do
+> cp $i-default /etc/default/$i
+> done
 
-cp *.sh /usr/local/bin
+$ cp *.sh /usr/local/bin
 
-for i in homePhonePulseReceive.service homePhonePulseSendSilent.service mppingResponder.service
-do
-cp $i-systemd /etc/systemd/system/$i
-done
+$ for i in homePhonePulseReceive.service homePhonePulseSendSilent.service mppingResponder.service
+> do
+> cp $i-systemd /etc/systemd/system/$i
+> done
 ```
 
 #### systemdの作業
 ```
-systemctl enable homePhonePulseReceive homePhonePulseSendSilent mppingResponder
+$ systemctl enable homePhonePulseReceive homePhonePulseSendSilent mppingResponder
 ```
 
 
@@ -210,14 +258,24 @@ ext4は簡単にはファイルシステムは壊れないが，電源ブチブ�
 [[メモ] Raspberry Piで OverlayFS (組み込み向け設定・スクリプト)](http://qiita.com/mt08/items/24510d9845b77ef28d8b)
 
 ## 参考:まとも?なUSBサウンドモジュールを使う場合
-default.paの変更点 サウンドモジュールの名前が当然変わるので
-その名前に合わせて
-startrtpsendとstoprtpsendを修正
+サウンドブラスターでは，pulseaudioの機能でマイクからの入力をそのままRTPで送信することができなかったが，他のサウンドモジュールでは，可能かもしれない．その場合の変更すべき点は以下の3箇所．
+### default.paの編集
+サウンドモジュールの名前が当然変わるのでdefault.paの入出力デバイスを名前で直接指定している部分は変更する．
 
-### startrtpsend
-parecとpacatの実行部分をコメントアウト
+### 送信開始スクリプト(startRtpSend)の変更
+```
+#!/bin/sh
+pactl set-sink-mute 0 1
+pactl load-module module-rtp-send loop=false  &> /dev/null
+sleepenh 0.3 &>/dev/null
+parec | pacat -p  <--この行を削除
+```
 
-### stoprtpsend
-parecをkillしている部分をコメントアウト
-
-
+### 送信終了スクリプト(stopRtpSend)の変更
+```
+#!/bin/sh
+kill `pidof parec` &>/dev/null  <--- この行を削除
+pactl unload-module module-rtp-send &>/dev/null
+sleepenh 2 &>/dev/null
+pactl set-sink-mute 0 0
+```
